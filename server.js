@@ -1,172 +1,103 @@
-//export express
-const express = require("express");
-//export mongoose
-const mongoose = require("mongoose");
-//export dotenv
-require("dotenv").config();
-//express app
+      ///ASSESMENT 2///
+
+//import express ,moongoose, and dotenv
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+
+//create app and set the port
 const app = express();
-//set port
-const PORT = 5500;
-// middleware
+const PORT = process.env.PORT || 3000;
+
+//middleware to to read json data
 app.use(express.json());
-//connect to mongodb
-mongoose.connect(process.env.MONG_URI)
-.then(()=>{
-    console.log("Mongodb connected successfully");
-})
-.catch((err)=>{
-    console.log(err);
-});
-//define user schema
+
+//connect to mongodb using mongo uri from .env file
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('MongoDB connected'))
+    .catch((err) => console.error("MongoDB connection error:", err));
+    
+
+    //create user schema and define the fields
 const userSchema = new mongoose.Schema({
 name: {
-    type: String,
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-});
-
-// Create the User model
-const User = mongoose.model("User", userSchema);
-
-// 1. CREATE USER - POST
-app.post("/user", async (req, res) => {
-  try {
-    const { name, email } = req.body;
-
-    if (!name || !email) {
-      return res.status(400).json({
-        message: "Name and email are required",
-      });
+        type: String,
+        required: true,
+    },
+email: {
+       type: String,
+        required: true,
+        unique: true
     }
-
-    const user = await User.create({ name, email });
-
-    res.status(201).json({
-      message: "User created successfully",
-      user,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
 });
 
-// 2. READ ALL USERS - GET
-app.get("/user", async (req, res) => {
-  try {
-    const users = await User.find();
+//create user model
+const User = mongoose.model('User', userSchema);
 
-    res.status(200).json({ users });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-// 3. READ ONE USER - GET
-app.get("/user/:id", async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+//create user by post 
+app.post('/users', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        const user = new User({ name, email });
+        await user.save();
+        res.status(201).json(user);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
     }
-
-    res.status(200).json({ user });
-  } catch (err) {
-    res.status(400).json({ message: "Invalid user ID" });
-  }
 });
 
-// 4. UPDATE COMPLETE USER - PUT
-app.put("/user/:id", async (req, res) => {
-  try {
-    const { name, email } = req.body;
-
-    if (!name || !email) {
-      return res.status(400).json({
-        message: "Name and email are required for PUT",
-      });
+//Read  all users by get
+app.get('/users', async (req, res) => {
+    try {
+        const users = await User.find();
+        res.status(200).json(users);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { name, email },
-      { new: true, runValidators: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    res.status(200).json({
-      message: "User updated successfully",
-      user,
-    });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
 });
-
-// 5. UPDATE PART OF USER - PATCH
-app.patch("/user/:id", async (req, res) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+//Read  one user by id get
+app.get('/users/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.status(200).json(user);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-
-    res.status(200).json({
-      message: "User partially updated successfully",
-      user,
-    });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
 });
-
-// 6. DELETE USER - DELETE
-app.delete("/user/:id", async (req, res) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+//Update user by id put
+app.put('/users/:id', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        const user = await User.findByIdAndUpdate(req.params.id, { name, email }, { new: true });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.status(200).json(user);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-
-    res.status(200).json({
-      message: "User deleted successfully",
-      user,
-    });
-  } catch (err) {
-    res.status(400).json({ message: "Invalid user ID" });
-  }
 });
-
-// Handle unknown routes
+//delete user by id delete
+app.delete('/users/:id',async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.status(200).json({ message: 'User deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+//handle unknown routes
 app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+    res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server after connecting to MongoDB
-mongoose.connection.once("open", () => {
-  app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-  });
+//server start
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
